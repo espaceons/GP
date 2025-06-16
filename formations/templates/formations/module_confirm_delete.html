@@ -1,0 +1,54 @@
+{% extends 'base.html' %} {% load i18n %} {% block title %}{% trans "Confirmer
+la suppression" %}{% endblock %} {% block content %}
+<div class="container mt-4">
+  <div class="card border-danger">
+    <div class="card-header bg-danger text-white">
+      <h2>
+        <i class="fas fa-exclamation-triangle"></i> {% trans "Confirmer la
+        suppression" %}
+      </h2>
+    </div>
+
+    <div class="card-body">
+      <h3>{% trans "Êtes-vous sûr de vouloir supprimer ce module ?" %}</h3>
+
+      <div class="card mt-4">
+        <div class="card-header">
+          <h4>Module {{ module.ordre }}: {{ module.titre }}</h4>
+        </div>
+        <div class="card-body">
+          <p class="card-text">
+            <strong>{% trans "Formation" %}:</strong> {{ module.formation.titre
+            }}<br />
+            <strong>{% trans "Durée" %}:</strong> {{ module.duree_heures }} {%
+            trans "heures" %}<br />
+            <strong>{% trans "Description" %}:</strong> {{
+            module.description|truncatewords:20 }}
+          </p>
+        </div>
+      </div>
+
+      <div class="alert alert-warning mt-4">
+        <i class="fas fa-exclamation-circle"></i>
+        <strong>{% trans "Attention" %}:</strong>
+        {% trans "Cette action est irréversible et affectera le programme de la
+        formation." %}
+      </div>
+    </div>
+
+    <div class="card-footer d-flex justify-content-between">
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">
+          <i class="fas fa-trash"></i> {% trans "Confirmer la suppression" %}
+        </button>
+      </form>
+
+      <a
+        href="{% url 'formations:detail' module.formation.pk %}"
+        class="btn btn-secondary"
+      >
+      </a>
+    </div>
+  </div>
+</div>

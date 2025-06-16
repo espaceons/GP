@@ -1,0 +1,64 @@
+{% extends 'base.html' %} {% load i18n %} {% block title %}{% trans "Confirmer
+la suppression" %}{% endblock %} {% block content %}
+<div class="container mt-4">
+  <div class="card border-danger">
+    <div class="card-header bg-danger text-white">
+      <h2>
+        <i class="fas fa-exclamation-triangle"></i> {% trans "Confirmer la
+        suppression" %}
+      </h2>
+    </div>
+
+    <div class="card-body">
+      <h3>
+        {% trans "Êtes-vous sûr de vouloir supprimer cette formation ?" %}
+      </h3>
+
+      <div class="card mt-4">
+        <div class="card-header">
+          <h4>{{ formation.reference }} - {{ formation.titre }}</h4>
+        </div>
+        <div class="card-body">
+          <p class="card-text">
+            <strong>{% trans "Domaine" %}:</strong> {{ formation.domaine.nom
+            }}<br />
+            <strong>{% trans "Durée" %}:</strong> {{ formation.duree_jours }} {%
+            trans "jours" %}<br />
+            <strong>{% trans "Modules" %}:</strong> {{ formation.modules.count
+            }}<br />
+            <strong>{% trans "Statut" %}:</strong>
+            {% if formation.actif %}
+            <span class="badge bg-success">{% trans "Active" %}</span>
+            {% else %}
+            <span class="badge bg-secondary">{% trans "Inactive" %}</span>
+            {% endif %}
+          </p>
+        </div>
+      </div>
+
+      <div class="alert alert-warning mt-4">
+        <i class="fas fa-exclamation-circle"></i>
+        <strong>{% trans "Attention" %}:</strong>
+        {% trans "Cette action supprimera également tous les modules associés et
+        ne peut pas être annulée." %}
+      </div>
+    </div>
+
+    <div class="card-footer d-flex justify-content-between">
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">
+          <i class="fas fa-trash"></i> {% trans "Confirmer la suppression" %}
+        </button>
+      </form>
+
+      <a
+        href="{% url 'formations:detail' formation.pk %}"
+        class="btn btn-secondary"
+      >
+        <i class="fas fa-times"></i> {% trans "Annuler" %}
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends 'base.html' %} {% load i18n %} {% block title %}{% trans "Inscription
+Formateur" %}{% endblock %} {% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <h2 class="mb-0">{% trans "Inscription Formateur" %}</h2>
+        </div>
+        <div class="card-body">
+          <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <h4 class="mb-3">{% trans "Informations de connexion" %}</h4>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                {{ form.username.label_tag }} {{ form.username }} {% if
+                form.username.errors %}
+                <div class="invalid-feedback d-block">
+                  {{ form.username.errors }}
+                </div>
+                {% endif %}
+              </div>
+              <div class="col-md-6 mb-3">
+                {{ form.email.label_tag }} {{ form.email }} {% if
+                form.email.errors %}
+                <div class="invalid-feedback d-block">
+                  {{ form.email.errors }}
+                </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">{{ form.first_name.label_tag</div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

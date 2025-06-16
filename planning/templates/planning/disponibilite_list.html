@@ -1,0 +1,77 @@
+{% extends 'base.html' %} {% load i18n %} {% block title %}{% trans "Mes
+disponibilités" %}{% endblock %} {% block content %}
+<div class="container mt-4">
+  <div class="card">
+    <div
+      class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
+    >
+      <h2>
+        <i class="fas fa-user-clock"></i> {% trans "Mes disponibilités" %}
+      </h2>
+      <a
+        href="{% url 'planning:disponibilite_create' %}"
+        class="btn btn-light btn-sm"
+      >
+        <i class="fas fa-plus"></i> {% trans "Ajouter" %}
+      </a>
+    </div>
+
+    <div class="card-body">
+      {% if disponibilite_list %}
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>{% trans "Date début" %}</th>
+              <th>{% trans "Date fin" %}</th>
+              <th>{% trans "Type" %}</th>
+              <th>{% trans "Notes" %}</th>
+              <th>{% trans "Actions" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for dispo in disponibilite_list %}
+            <tr>
+              <td>{{ dispo.date_debut|date:"DATETIME_FORMAT" }}</td>
+              <td>{{ dispo.date_fin|date:"DATETIME_FORMAT" }}</td>
+              <td>
+                {% if dispo.type == 'DISPONIBLE' %}
+                <span class="badge bg-success">{% trans "Disponible" %}</span>
+                {% else %}
+                <span class="badge bg-danger">{% trans "Indisponible" %}</span>
+                {% endif %}
+              </td>
+              <td>{{ dispo.notes|truncatechars:30|default:"-" }}</td>
+              <td>
+                <div class="btn-group btn-group-sm">
+                  <a
+                    href="#"
+                    class="btn btn-warning btn-sm"
+                    title="{% trans 'Modifier' %}"
+                  >
+                    <i class="fas fa-edit"></i>
+                  </a>
+                  <a
+                    href="#"
+                    class="btn btn-danger btn-sm"
+                    title="{% trans 'Supprimer' %}"
+                  >
+                    <i class="fas fa-trash"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="alert alert-info">
+        {% trans "Vous n'avez pas encore enregistré de périodes de
+        disponibilité." %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,307 @@
+{% extends 'base.html' %} {% load i18n %} {% block title %}{% trans "Tableau de
+bord Formateur" %}{% endblock %} {% block content %}
+<div class="container-fluid">
+  <!-- En-tête -->
+  <div
+    class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom"
+  >
+    <h1 class="h2">{% trans "Tableau de bord" %}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+      <div class="btn-group me-2">
+        <a href="{% url 'planning:cours_add' %}" class="btn btn-sm btn-primary">
+          <i class="fas fa-plus"></i> {% trans "Nouveau cours" %}
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cartes statistiques -->
+  <div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="card border-left-primary shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div
+                class="text-xs font-weight-bold text-primary text-uppercase mb-1"
+              >
+                {% trans "Cours programmés" %}
+              </div>
+              <div class="h5 mb-0 font-weight-bold text-gray-800">
+                {{ upcoming_count }}
+              </div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-calendar-alt fa-2x text-gray-300"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="card border-left-success shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div
+                class="text-xs font-weight-bold text-success text-uppercase mb-1"
+              >
+                {% trans "Taux de présence" %}
+              </div>
+              <div class="h5 mb-0 font-weight-bold text-gray-800">
+                {{ attendance_rate }}%
+              </div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-user-check fa-2x text-gray-300"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="card border-left-info shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div
+                class="text-xs font-weight-bold text-info text-uppercase mb-1"
+              >
+                {% trans "Élèves suivis" %}
+              </div>
+              <div class="h5 mb-0 font-weight-bold text-gray-800">
+                {{ students.count }}
+              </div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-users fa-2x text-gray-300"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if next_course %}
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="card border-left-warning shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div
+                class="text-xs font-weight-bold text-warning text-uppercase mb-1"
+              >
+                {% trans "Prochain cours" %}
+              </div>
+              <div class="h6 mb-0 font-weight-bold text-gray-800">
+                {{ next_course.titre }}<br />
+                <small
+                  >{{ next_course.date }} {{ next_course.heure_debut|time:"H:i"
+                  }}</small
+                >
+              </div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-chalkboard-teacher fa-2x text-gray-300"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Prochains cours -->
+  <div class="card shadow mb-4">
+    <div
+      class="card-header py-3 d-flex flex-row align-items-center justify-content-between"
+    >
+      <h6 class="m-0 font-weight-bold text-primary">
+        {% trans "Vos prochains cours" %}
+      </h6>
+      <a href="{% url 'planning:cours_list' %}" class="btn btn-sm btn-link">
+        {% trans "Voir tout" %} <i class="fas fa-arrow-right"></i>
+      </a>
+    </div>
+    <div class="card-body">
+      {% if upcoming_courses %}
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>{% trans "Date" %}</th>
+              <th>{% trans "Formation" %}</th>
+              <th>{% trans "Titre" %}</th>
+              <th>{% trans "Heure" %}</th>
+              <th>{% trans "Salle" %}</th>
+              <th>{% trans "Actions" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cours in upcoming_courses %}
+            <tr>
+              <td>{{ cours.date|date:"d/m/Y" }}</td>
+              <td>{{ cours.formation.nom }}</td>
+              <td>
+                <a href="{% url 'planning:cours_detail' cours.id %}">
+                  {{ cours.titre }}
+                </a>
+              </td>
+              <td>
+                {{ cours.heure_debut|time:"H:i" }} - {{
+                cours.heure_fin|time:"H:i" }}
+              </td>
+              <td>{{ cours.salle }}</td>
+              <td>
+                <a
+                  href="{% url 'presence:marquer' cours.id %}"
+                  class="btn btn-sm btn-info"
+                >
+                  <i class="fas fa-clipboard-check"></i> {% trans "Présences" %}
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="alert alert-info">
+        {% trans "Aucun cours programmé pour les 7 prochains jours." %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Cours incomplets -->
+  {% if incomplete_courses %}
+  <div class="card shadow mb-4">
+    <div class="card-header py-3 bg-warning">
+      <h6 class="m-0 font-weight-bold text-white">
+        {% trans "Cours passés à compléter" %}
+      </h6>
+    </div>
+    <div class="card-body">
+      <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle"></i>
+        {% trans "Vous avez des cours passés pour lesquels les présences n'ont
+        pas été enregistrées." %}
+      </div>
+
+      <ul class="list-group">
+        {% for cours in incomplete_courses %}
+        <li
+          class="list-group-item d-flex justify-content-between align-items-center"
+        >
+          {{ cours.titre }} ({{ cours.date }})
+          <a
+            href="{% url 'presence:marquer' cours.id %}"
+            class="btn btn-sm btn-warning"
+          >
+            <i class="fas fa-edit"></i> {% trans "Compléter" %}
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Élèves récents -->
+  <div class="row">
+    <div class="col-lg-6 mb-4">
+      <div class="card shadow">
+        <div class="card-header py-3">
+          <h6 class="m-0 font-weight-bold text-primary">
+            {% trans "Vos élèves récents" %}
+          </h6>
+        </div>
+        <div class="card-body">
+          {% if students %}
+          <div class="list-group">
+            {% for eleve in students %}
+            <a href="#" class="list-group-item list-group-item-action">
+              <div class="d-flex w-100 justify-content-between">
+                <h6 class="mb-1">{{ eleve.user.get_full_name }}</h6>
+                <small
+                  >{% trans "Cours suivis:" %} {{ eleve.course_count }}</small
+                >
+              </div>
+              <small class="text-muted">
+                {{ eleve.inscription_set.first.formation.nom }}
+              </small>
+            </a>
+            {% endfor %}
+          </div>
+          <a href="#" class="btn btn-block btn-light mt-2">
+            {% trans "Voir tous les élèves" %}
+          </a>
+          {% else %}
+          <div class="alert alert-info">
+            {% trans "Aucun élève associé à vos formations." %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendrier miniature -->
+    <div class="col-lg-6 mb-4">
+      <div class="card shadow">
+        <div class="card-header py-3">
+          <h6 class="m-0 font-weight-bold text-primary">
+            {% trans "Calendrier" %}
+          </h6>
+        </div>
+        <div class="card-body">
+          <div id="mini-calendar"></div>
+          <div class="mt-3 small">
+            <span class="badge bg-primary text-white mr-2"
+              >{% trans "Aujourd'hui" %}</span
+            >
+            <span class="badge bg-success text-white">{% trans "Cours" %}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<!-- FullCalendar CSS -->
+<link
+  href="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css"
+  rel="stylesheet"
+/>
+
+<!-- FullCalendar JS -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/locales/fr.min.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+      var calendarEl = document.getElementById('mini-calendar');
+      var calendar = new FullCalendar.Calendar(calendarEl, {
+          initialView: 'dayGridMonth',
+          locale: 'fr',
+          headerToolbar: {
+              left: 'prev',
+              center: 'title',
+              right: 'next'
+          },
+          events: [
+              {% for cours in upcoming_courses %}
+              {
+                  title: '{{ cours.titre|escapejs }}',
+                  start: '{{ cours.date|date:"Y-m-d" }}T{{ cours.heure_debut|time:"H:i:s" }}',
+                  end: '{{ cours.date|date:"Y-m-d" }}T{{ cours.heure_fin|time:"H:i:s" }}',
+                  url: '{% url "planning:cours_detail" cours.id %}',
+                  color: '#1cc88a'
+              },
+              {% endfor %}
+          ]
+      });
+      calendar.render();
+  });
+</script>
+{% endblock %}

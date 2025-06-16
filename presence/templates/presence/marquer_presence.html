@@ -1,0 +1,90 @@
+{% extends 'base.html' %} {% load i18n %} {% block title %}{% trans "Marquer les
+présences" %} - {{ cours.titre }}{% endblock %} {% block content %}
+<div class="container mt-4">
+  <div class="card">
+    <div class="card-header bg-primary text-white">
+      <h2>
+        <i class="fas fa-clipboard-check"></i>
+        {% trans "Marquer les présences" %} - {{ cours.titre }}
+      </h2>
+    </div>
+
+    <div class="card-body">
+      <div class="mb-4">
+        <h4>{% trans "Détails du cours" %}</h4>
+        <p>
+          <strong>{% trans "Date" %}:</strong> {{ cours.date|date:"DATE_FORMAT"
+          }}<br />
+          <strong>{% trans "Horaire" %}:</strong> {{
+          cours.heure_debut|time:"TIME_FORMAT" }} - {{
+          cours.heure_fin|time:"TIME_FORMAT" }}<br />
+          <strong>{% trans "Formation" %}:</strong> {{ cours.formation.nom }}<br />
+          <strong>{% trans "Salle" %}:</strong> {{
+          cours.salle.nom|default:_("Non attribuée") }}
+        </p>
+      </div>
+
+      <form method="post">
+        {% csrf_token %}
+
+        <h4>{% trans "Liste des élèves" %}</h4>
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>{% trans "Élève" %}</th>
+                <th class="text-center">{% trans "Présent" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for eleve in eleves %}
+              <tr>
+                <td>
+                  {{ eleve.eleve.user.get_full_name }}
+                  <small class="text-muted d-block"
+                    >{{ eleve.eleve.numero_etudiant }}</small
+                  >
+                </td>
+                <td class="text-center align-middle">
+                  <div class="form-check form-switch d-inline-block">
+                    <input
+                      type="checkbox"
+                      name="presence_{{ eleve.eleve.id }}"
+                      id="presence_{{ eleve.eleve.id }}"
+                      class="form-check-input"
+                      {%
+                      if
+                      form.cleaned_data.presence_{{
+                      eleve.eleve.id
+                      }}
+                      %}checked{%
+                      endif
+                      %}
+                    />
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="2" class="text-center text-muted">
+                  {% trans "Aucun élève inscrit à cette formation" %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-4">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> {% trans "Enregistrer les présences" %}
+          </button>
+          <a href="{{ cours.get_absolute_url }}" class="btn btn-secondary">
+            <i class="fas fa-times"></i> {% trans "Annuler" %}
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

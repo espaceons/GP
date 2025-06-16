@@ -1,0 +1,52 @@
+{% extends 'base.html' %} {% load i18n crispy_forms_tags %} {% block title %}{%
+if form.instance.pk %}{% trans "Modifier le cours" %}{% else %}{% trans "Créer
+un cours" %}{% endif %}{% endblock %} {% block content %}
+<div class="container mt-4">
+  <div class="card">
+    <div class="card-header bg-primary text-white">
+      <h2>
+        {% if form.instance.pk %}
+        <i class="fas fa-edit"></i> {% trans "Modifier le cours" %} {% else %}
+        <i class="fas fa-plus"></i> {% trans "Créer un nouveau cours" %} {%
+        endif %}
+      </h2>
+    </div>
+
+    <div class="card-body">
+      <form method="post" novalidate>
+        {% csrf_token %} {{ form|crispy }}
+
+        <div class="form-group mt-4">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> {% trans "Enregistrer" %}
+          </button>
+          <a
+            href="{% if form.instance.pk %}{% url 'planning:cours_detail' form.instance.pk %}{% else %}{% url 'planning:cours_list' %}{% endif %}"
+            class="btn btn-secondary"
+          >
+            <i class="fas fa-times"></i> {% trans "Annuler" %}
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Initialisation des sélecteurs de date et heure
+    $(".datepicker").datepicker({
+      format: "dd/mm/yyyy",
+      language: "fr",
+      autoclose: true,
+      todayHighlight: true,
+    });
+
+    $(".timepicker").timepicker({
+      minuteStep: 15,
+      showSeconds: false,
+      showMeridian: false,
+    });
+  });
+</script>
+{% endblock %}

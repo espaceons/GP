@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Catalogue des formations" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between">
+            <h2><i class="fas fa-graduation-cap"></i> {% trans "Formations disponibles" %}</h2>
+            {% if perms.formations.add_formation %}
+            <a href="{% url 'formations:create' %}" class="btn btn-light btn-sm align-self-center">
+                <i class="fas fa-plus"></i> {% trans "Ajouter" %}
+            </a>
+            {% endif %}
+        </div>
+        
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <select class="form-select" id="domaine-filter">
+                        <option value="">{% trans "Tous les domaines" %}</option>
+                        {% for domaine in domaines %}
+                        <option value="{{ domaine.id }}" {% if request.GET.domaine == domaine.id|stringformat:"s" %}selected{% endif %}>
+                            {{ domaine.nom }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select class="form-select" id="status-filter">
+                        <option value="">{% trans "Tous les statuts" %}</option>
+                        <option value="true" {% if request.GET.actif == 'true' %}selected{% endif %}>{% trans "Actives" %}</option>
+                        <option value="false" {% if request.GET.actif == 'false' %}selected{% endif %}>{% trans "Inactives" %}</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <input type="text" class="form-control" placeholder="{% trans 'Rechercher...' %}" id="search-input">
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>{% trans "Référence" %}</th>
+                            <th>{% trans "Titre" %}</th>
+                            <th>{% trans "Domaine" %}</th>
+                            <th>{% trans "Durée" %}</th>
+                            <th>{% trans "Prix" %}</th>
+                            <th>{% trans "Statut" %}</th>
+                            <th>{% trans "Actions" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for formation in formations %}
+                        <tr>
+                            <td>{{ formation.reference }}</td>
+                            <td>
+                                <a href="{{ formation.get_absolute_url }}">
+                                    {{ formation.titre|truncatechars:40 }}
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge" style="background-color: {{ formation.domaine.couleur }};">
+                                    {{ formation.domaine.nom }}
+                                </span>
+                            </td>
+                            <td>{{ formation.duree_jours }} {% trans "jours" %}</td>
+                            <td>{{ formation.prix }} €</td>
+                            <td>
+                                {% if formation.actif %}
+                                <span class="badge bg-success">{% trans "Active" %}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{% trans "Inactive" %}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ formation.get_absolute_url }}" class="btn btn-info" title="{% trans 'Détails' %}">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if perms.formations.change_formation %}
+                                    <a href="{% url 'formations:update' formation.pk %}" class="btn btn-warning" title="{% trans 'Modifier' %}">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">
+                                {% trans "Aucune formation disponible" %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if is_paginated %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+                    {% else %}
+                    <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filtrage par domaine
+    document.getElementById('domaine-filter').addEventListener('change', function() {
+        const domaineId = this.value;
+        const url = new URL(window.location.href);
+        
+        if (domaineId) {
+            url.searchParams.set('domaine', domaineId);
+        } else {
+            url.searchParams.delete('domaine');
+        }
+        
+        window.location.href = url.toString();
+    });
+    
+    // Filtrage par statut
+    document.getElementById('status-filter').addEventListener('change', function() {
+        const status = this.value;
+        const url = new URL(window.location.href);
+        
+        if (status) {
+            url.searchParams.set('actif', status);
+        } else {
+            url.searchParams.delete('actif');
+        }
+        
+        window.location.href = url.toString();
+    });
+    
+    // Recherche instantanée
+    document.getElementById('search-input').addEventListener('keyup', function(e) {
+        if (e.key === 'Enter') {
+            const searchTerm = this.value.trim();
+            const url = new URL(window.location.href);
+            
+            if (searchTerm) {
+                url.searchParams.set('q', searchTerm);
+            } else {
+                url.searchParams.delete('q');
+            }
+            
+            window.location.href = url.toString();
+        }
+    });
+});
+</script>
+{% endblock %}

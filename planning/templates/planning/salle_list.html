@@ -1,0 +1,53 @@
+{% extends 'base.html' %} {% load i18n %} {% block title %}{% trans "Liste des
+salles" %}{% endblock %} {% block content %}
+<div class="container mt-4">
+  <div class="card">
+    <div class="card-header bg-primary text-white">
+      <h2>
+        <i class="fas fa-door-open"></i> {% trans "Salles de formation" %}
+      </h2>
+    </div>
+
+    <div class="card-body">
+      <div class="row">
+        {% for salle in salle_list %}
+        <div class="col-md-4 mb-4">
+          <div class="card h-100">
+            <div class="card-header bg-secondary text-white">
+              <h3 class="h5 mb-0">{{ salle.nom }}</h3>
+            </div>
+            <div class="card-body">
+              <ul class="list-unstyled">
+                <li>
+                  <strong>{% trans "Bâtiment" %}:</strong> {{ salle.batiment }}
+                </li>
+                <li><strong>{% trans "Étage" %}:</strong> {{ salle.etage }}</li>
+                <li>
+                  <strong>{% trans "Capacité" %}:</strong> {{ salle.capacite }}
+                  {% trans "personnes" %}
+                </li>
+              </ul>
+              <hr />
+              <h4>{% trans "Équipements" %}</h4>
+              <p>{{ salle.equipements|linebreaksbr|default:"-" }}</p>
+            </div>
+            <div class="card-footer bg-light">
+              <a href="#" class="btn btn-sm btn-primary">
+                <i class="fas fa-calendar-check"></i> {% trans "Voir
+                disponibilités" %}
+              </a>
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+          <div class="alert alert-info">
+            {% trans "Aucune salle disponible." %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

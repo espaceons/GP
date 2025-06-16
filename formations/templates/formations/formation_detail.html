@@ -1,0 +1,192 @@
+{% extends 'base.html' %} {% load i18n %} {% block title %}{{ formation.titre
+}}{% endblock %} {% block content %}
+<div class="container mt-4">
+  <div class="card">
+    <div
+      class="card-header bg-primary text-white d-flex justify-content-between"
+    >
+      <h2>
+        <span
+          class="badge"
+          style="background-color: {{ formation.domaine.couleur }};"
+        >
+          {{ formation.domaine.nom }}
+        </span>
+        {{ formation.reference }} - {{ formation.titre }}
+      </h2>
+      <div>
+        {% if perms.formations.change_formation %}
+        <a
+          href="{% url 'formations:update' formation.pk %}"
+          class="btn btn-light btn-sm"
+        >
+          <i class="fas fa-edit"></i> {% trans "Modifier" %}
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <h3>{% trans "Description" %}</h3>
+          <div class="border p-3 bg-light mb-4">
+            {{ formation.description|linebreaks }}
+          </div>
+
+          <h3>{% trans "Public cible" %}</h3>
+          <div class="border p-3 bg-light mb-4">
+            {{ formation.public_cible|linebreaks }}
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+              <h3 class="h5 mb-0">{% trans "Informations pratiques" %}</h3>
+            </div>
+            <div class="card-body">
+              <dl class="row">
+                <dt class="col-sm-5">{% trans "Durée" %}</dt>
+                <dd class="col-sm-7">
+                  {{ formation.duree_jours }} {% trans "jours" %}
+                </dd>
+
+                <dt class="col-sm-5">{% trans "Prix" %}</dt>
+                <dd class="col-sm-7">{{ formation.prix }} €</dd>
+
+                <dt class="col-sm-5">{% trans "Statut" %}</dt>
+                <dd class="col-sm-7">
+                  {% if formation.actif %}
+                  <span class="badge bg-success">{% trans "Active" %}</span>
+                  {% else %}
+                  <span class="badge bg-secondary">{% trans "Inactive" %}</span>
+                  {% endif %}
+                </dd>
+              </dl>
+            </div>
+          </div>
+
+          <h3>{% trans "Objectifs pédagogiques" %}</h3>
+          <div class="border p-3 bg-light mb-4">
+            {{ formation.objectifs|linebreaks }}
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h3>{% trans "Modules de formation" %}</h3>
+          {% if perms.formations.add_module %}
+          <button
+            class="btn btn-primary btn-sm"
+            data-bs-toggle="modal"
+            data-bs-target="#moduleModal"
+          >
+            <i class="fas fa-plus"></i> {% trans "Ajouter un module" %}
+          </button>
+          {% endif %}
+        </div>
+
+        <div class="list-group">
+          {% for module in formation.modules.all %}
+          <div class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h5 class="mb-1">
+                  Module {{ module.ordre }}: {{ module.titre }}
+                </h5>
+                <small class="text-muted">
+                  {{ module.duree_heures }} {% trans "heures" %} | {{
+                  module.description|truncatewords:20 }}
+                </small>
+              </div>
+              <div class="btn-group btn-group-sm">
+                {% if perms.formations.change_module %}
+                <a
+                  href="{% url 'formations:module_update' module.pk %}"
+                  class="btn btn-warning"
+                >
+                  <i class="fas fa-edit"></i>
+                </a>
+                {% endif %} {% if perms.formations.delete_module %}
+                <a
+                  href="{% url 'formations:module_delete' module.pk %}"
+                  class="btn btn-danger"
+                >
+                  <i class="fas fa-trash"></i>
+                </a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% empty %}
+          <div class="alert alert-info">
+            {% trans "Aucun module défini pour cette formation." %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card-footer text-muted">
+      <small>
+        {% trans "Créée le" %} {{ formation.created_at|date:"DATETIME_FORMAT" }}
+        {% if formation.updated_at != formation.created_at %} | {% trans
+        "Modifiée le" %} {{ formation.updated_at|date:"DATETIME_FORMAT" }} {%
+        endif %}
+      </small>
+    </div>
+  </div>
+
+  <div class="mt-3">
+    <a href="{% url 'formations:list' %}" class="btn btn-secondary">
+      <i class="fas fa-arrow-left"></i> {% trans "Retour au catalogue" %}
+    </a>
+  </div>
+</div>
+
+<!-- Modal pour l'ajout de module -->
+{% if perms.formations.add_module %}
+<div
+  class="modal fade"
+  id="moduleModal"
+  tabindex="-1"
+  aria-labelledby="moduleModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="moduleModalLabel">
+          {% trans "Ajouter un module" %}
+        </h5>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <form
+        method="post"
+        action="{% url 'formations:module_create' formation.pk %}"
+      >
+        <div class="modal-body">{% csrf_token %} {{ module_form|crispy }}</div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
+            {% trans "Annuler" %}
+          </button>
+          <button type="submit" class="btn btn-primary">
+            {% trans "Enregistrer" %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %} {% endblock %}

@@ -1,0 +1,34 @@
+{% extends 'base.html' %} {% load i18n crispy_forms_tags %} {% block title %}{%
+if form.instance.pk %}{% trans "Modifier la formation" %}{% else %}{% trans
+"Créer une formation" %}{% endif %}{% endblock %} {% block content %}
+<div class="container mt-4">
+  <div class="card">
+    <div class="card-header bg-primary text-white">
+      <h2>
+        {% if form.instance.pk %}
+        <i class="fas fa-edit"></i> {% trans "Modifier la formation" %} {% else
+        %} <i class="fas fa-plus"></i> {% trans "Créer une nouvelle formation"
+        %} {% endif %}
+      </h2>
+    </div>
+
+    <div class="card-body">
+      <form method="post" novalidate>
+        {% csrf_token %} {{ form|crispy }}
+
+        <div class="form-group mt-4">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> {% trans "Enregistrer" %}
+          </button>
+          <a
+            href="{% if form.instance.pk %}{% url 'formations:detail' form.instance.pk %}{% else %}{% url 'formations:list' %}{% endif %}"
+            class="btn btn-secondary"
+          >
+            <i class="fas fa-times"></i> {% trans "Annuler" %}
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
