@@ -16,9 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-
+from django.conf import settings
+from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # Inclusions de vos applications avec leurs namespaces
     path('', include('formations.urls', namespace='formations')),
     path('comptes/', include('accounts.urls', namespace='accounts')),
     path('formateurs/', include('formateurs.urls', namespace='formateurs')),
@@ -26,4 +28,10 @@ urlpatterns = [
     path('planning/', include('planning.urls', namespace='planning')),
     path('presence/', include('presence.urls', namespace='presence')),
     path('documents/', include('documents.urls', namespace='documents')),
+    path('formations/', include('formations.urls', namespace='formations')),
 ]
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL,
+                          document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL,
+                          document_root=settings.STATIC_ROOT)

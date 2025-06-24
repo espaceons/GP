@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard Élève{% endblock %}
+{% block content %}
+<div class="container">
+  <h2>Bienvenue {{ eleve.get_full_name }}</h2>
+  <p>Voici votre tableau de bord personnel.</p>
+
+  <ul class="list-group mt-4">
+    <li class="list-group-item"><a href="#">📘 Mes cours</a></li>
+    <li class="list-group-item"><a href="#">📁 Mes documents</a></li>
+    <li class="list-group-item"><a href="{% url 'accounts:profile' %}">👤 Mon profil</a></li>
+  </ul>
+</div>
+{% endblock %}

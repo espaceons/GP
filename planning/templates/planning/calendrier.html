@@ -1,0 +1,12 @@
+<h2>Calendrier des cours</h2>
+<ul>
+  {% for cours in cours %}
+  <li>
+    {{ cours.date }} - {{ cours.heure_debut }} à {{ cours.heure_fin }} : {{
+    cours.formation.nom }} avec {{ cours.formateur.user.get_full_name }} en
+    salle {{ cours.salle.nom }}
+  </li>
+  {% empty %}
+  <li>Aucun cours prévu dans les 30 prochains jours.</li>
+  {% endfor %}
+</ul>

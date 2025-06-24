@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Mon Profil{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-3">Profil de {{ user.get_full_name }}</h2>
+
+    <div class="card">
+        <div class="card-body">
+            <p><strong>Nom d'utilisateur :</strong> {{ user.username }}</p>
+            <p><strong>Email :</strong> {{ user.email }}</p>
+            <p><strong>Téléphone :</strong> {{ user.telephone|default:"-" }}</p>
+            <p><strong>Adresse :</strong> {{ user.adresse|default:"-" }}</p>
+            <p><strong>Type de compte :</strong>
+                {% if profile_type == 'eleve' %} Élève
+                {% elif profile_type == 'formateur' %} Formateur
+                {% else %} Utilisateur
+                {% endif %}
+            </p>
+
+            {% if profile_type == 'eleve' %}
+            <hr>
+            <h5>Informations élève</h5>
+            <p><strong>Date de naissance :</strong> {{ profile.date_naissance }}</p>
+            <p><strong>Numéro étudiant :</strong> {{ profile.numero_etudiant }}</p>
+
+            {% elif profile_type == 'formateur' %}
+            <hr>
+            <h5>Informations formateur</h5>
+            <p><strong>Spécialité :</strong> {{ profile.specialite }}</p>
+            <p><strong>Matricule :</strong> {{ profile.matricule }}</p>
+            <p><strong>Bio :</strong> {{ profile.bio }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

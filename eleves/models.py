@@ -1,44 +1,52 @@
+from datetime import date
 from django.db import models
-from django.conf import settings # Importation pour settings.AUTH_USER_MODEL
+from django.conf import settings  # Importe les paramètres de Django
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 from django.core.validators import RegexValidator
 from formations.models import Formation
 import uuid
-from datetime import date # Importation manquante pour la fonction get_age
+
 
 class Eleve(models.Model):
     """
     Modèle représentant un élève/étudiant dans le système
     """
-    # Utilisation de settings.AUTH_USER_MODEL pour référencer le modèle d'utilisateur configuré
-    user = models.OneToOneField( settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='eleve', verbose_name=_('Compte utilisateur') )
-    
+    user = models.OneToOneField(settings.AUTH_USER_MODEL,  on_delete=models.CASCADE,
+                                related_name='eleve', verbose_name=_('Compte utilisateur'))
+
     # Identifiants scolaires
-    numero_etudiant = models.CharField( _('Numéro étudiant'), max_length=20, unique=True,  default=uuid.uuid4().hex[:8].upper(),  help_text=_('Identifiant unique de l\'étudiant') )
-    
+    numero_etudiant = models.CharField(_('Numéro étudiant'), max_length=20, unique=True, default=uuid.uuid4(
+    ).hex[:8].upper(), help_text=_('Identifiant unique de l\'étudiant'))
+
     # Informations personnelles
-    date_naissance = models.DateField(_('Date de naissance'), null=True, blank=True)
-    telephone = models.CharField( _('Téléphone'), max_length=20, validators=[
-            RegexValidator(
-                regex=r'^\+?[0-9]{9,15}$',
-                message=_("Format de téléphone invalide")
-            )
-        ],
+    date_naissance = models.DateField(
+        _('Date de naissance'), null=True, blank=True)
+    telephone = models.CharField(_('Téléphone'), max_length=20,
+                                 validators=[
+        RegexValidator(
+            regex=r'^\+?[0-9]{9,15}$',
+            message=_("Format de téléphone invalide")
+        )
+    ],
         blank=True,
         null=True
     )
-    
+    adresse = models.TextField(_('Adresse'), blank=True, null=True)
     ville = models.CharField(_('Ville'), max_length=100, blank=True, null=True)
-    code_postal = models.CharField(_('Code postal'), max_length=10, blank=True, null=True)
-    pays = models.CharField(_('Pays'), max_length=100, default='France', blank=True, null=True)
-    
+    code_postal = models.CharField(
+        _('Code postal'), max_length=10, blank=True, null=True)
+    pays = models.CharField(_('Pays'), max_length=100,
+                            default='France', blank=True,  null=True)
+
     # Relations
-    formations = models.ManyToManyField( Formation, through='Inscription', related_name='eleves', verbose_name=_('Formations suivies') )
-    
+    formations = models.ManyToManyField(
+        Formation,  through='Inscription', related_name='eleves',  verbose_name=_('Formations suivies'))
+
     # Métadonnées
-    created_at = models.DateTimeField( _('Date d\'inscription'),  auto_now_add=True )
-    updated_at = models.DateTimeField( _('Dernière mise à jour'),  auto_now=True )
+    created_at = models.DateTimeField(
+        _('Date d\'inscription'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('Dernière mise à jour'), auto_now=True)
 
     class Meta:
         verbose_name = _('Élève')
@@ -68,7 +76,8 @@ class Eleve(models.Model):
             return None
         today = date.today()
         return today.year - self.date_naissance.year - (
-            (today.month, today.day) < (self.date_naissance.month, self.date_naissance.day)
+            (today.month, today.day) < (
+                self.date_naissance.month, self.date_naissance.day)
         )
 
 
@@ -84,23 +93,17 @@ class Inscription(models.Model):
         ('termine', _('Terminée')),
     ]
 
-    eleve = models.ForeignKey(
-        Eleve,
-        on_delete=models.CASCADE,
-        related_name='inscriptions',
-        verbose_name=_('Élève')
-    )
-    formation = models.ForeignKey(
-        Formation,
-        on_delete=models.CASCADE,
-        related_name='inscriptions',
-        verbose_name=_('Formation')
-    )
-    date_inscription = models.DateTimeField( _('Date d\'inscription'), auto_now_add=True  )
-    date_debut = models.DateField( _('Date de début'), null=True, blank=True )
-    date_fin = models.DateField(  _('Date de fin'),  null=True, blank=True )
-    statut = models.CharField( _('Statut'), max_length=20, choices=STATUT_CHOICES, default='en_attente'  )
-    notes = models.TextField( _('Notes administratives'), blank=True, null=True )
+    eleve = models.ForeignKey(Eleve,  on_delete=models.CASCADE,
+                              related_name='inscriptions', verbose_name=_('Élève'))
+    formation = models.ForeignKey(Formation, on_delete=models.CASCADE,
+                                  related_name='inscriptions', verbose_name=_('Formation'))
+    date_inscription = models.DateTimeField(
+        _('Date d\'inscription'),  auto_now_add=True)
+    date_debut = models.DateField(_('Date de début'),  null=True, blank=True)
+    date_fin = models.DateField(_('Date de fin'),  null=True, blank=True)
+    statut = models.CharField(
+        _('Statut'),  max_length=20, choices=STATUT_CHOICES, default='en_attente')
+    notes = models.TextField(_('Notes administratives'), blank=True, null=True)
 
     class Meta:
         verbose_name = _('Inscription')
@@ -126,17 +129,16 @@ class SuiviPedagogique(models.Model):
     """
     Modèle pour le suivi pédagogique des élèves
     """
-    eleve = models.ForeignKey(
-        Eleve,
-        on_delete=models.CASCADE,
-        related_name='suivis',
-        verbose_name=_('Élève')
-    )
-    formateur = models.ForeignKey( 'formateurs.Formateur', on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_('Référent pédagogique'))
-    date_entretien = models.DateTimeField( _('Date de l\'entretien'), auto_now_add=True )
-    notes = models.TextField( _('Notes pédagogiques') )
-    objectifs = models.TextField( _('Objectifs pédagogiques'), blank=True, null=True )
-    evaluation = models.TextField( _('Évaluation'), blank=True, null=True )
+    eleve = models.ForeignKey(Eleve,  on_delete=models.CASCADE,
+                              related_name='suivis',  verbose_name=_('Élève'))
+    formateur = models.ForeignKey('formateurs.Formateur',  on_delete=models.SET_NULL,
+                                  null=True,  blank=True,  verbose_name=_('Référent pédagogique'))
+    date_entretien = models.DateTimeField(
+        _('Date de l\'entretien'),  auto_now_add=True)
+    notes = models.TextField(_('Notes pédagogiques'))
+    objectifs = models.TextField(
+        _('Objectifs pédagogiques'),  blank=True,  null=True)
+    evaluation = models.TextField(_('Évaluation'),  blank=True,  null=True)
 
     class Meta:
         verbose_name = _('Suivi pédagogique')
@@ -152,17 +154,18 @@ class DocumentEleve(models.Model):
     Modèle pour les documents spécifiques à un élève
     (CV, lettre de motivation, etc.)
     """
-    eleve = models.ForeignKey( Eleve,  on_delete=models.CASCADE, related_name='documents', verbose_name=_('Élève'))
-    type_document = models.CharField( _('Type de document'),  max_length=50, choices=[
-            ('cv', _('CV')),
-            ('lm', _('Lettre de motivation')),
-            ('diplome', _('Diplôme')),
-            ('autre', _('Autre')),
-        ]
+    eleve = models.ForeignKey(Eleve,  on_delete=models.CASCADE,
+                              related_name='documents', verbose_name=_('Élève'))
+    type_document = models.CharField(_('Type de document'), max_length=50,  choices=[
+        ('cv', _('CV')),
+        ('lm', _('Lettre de motivation')),
+        ('diplome', _('Diplôme')),
+        ('autre', _('Autre')),
+    ]
     )
-    fichier = models.FileField( _('Fichier'),  upload_to='eleves/documents/' )
-    date_depot = models.DateTimeField( _('Date de dépôt'), auto_now_add=True)
-    valide = models.BooleanField( _('Validé'), default=False )
+    fichier = models.FileField(_('Fichier'),  upload_to='eleves/documents/')
+    date_depot = models.DateTimeField(_('Date de dépôt'),  auto_now_add=True)
+    valide = models.BooleanField(_('Validé'),  default=False)
 
     class Meta:
         verbose_name = _('Document élève')
@@ -170,4 +173,3 @@ class DocumentEleve(models.Model):
 
     def __str__(self):
         return f"{self.get_type_document_display()} - {self.eleve}"
-

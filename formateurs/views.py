@@ -1,53 +1,86 @@
+# Importez le formulaire de l'app documents
+from datetime import datetime, timezone
+from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
+from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.urls import reverse_lazy, reverse
-from django.shortcuts import get_object_or_404
-from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
-from django.db.models import Count, Q, Sum
-from django.utils import timezone
-import datetime
+from django.utils.translation import gettext_lazy as _
+from django.db.models import Count, Q
 
-from planning.models import Cours, Disponibilite
-from eleves.models import Eleve
+# Importez tous les modèles nécessaires
+# Assurez-vous d'avoir Inscription ici aussi
+from documents.forms import DocumentForm
+from eleves.models import Eleve, SuiviPedagogique, DocumentEleve, Inscription
+# Pour les relations avec les élèves et les documents
+from planning.models import Cours, Formation
+# Pour la gestion des documents du formateur
 from documents.models import Document
-from formations.models import Formation
 from presence.models import Presence
 
+# Mixin personnalisé pour restreindre l'accès aux formateurs (réutilisé de documents-views ou planning-views)
+
+
 class FormateurRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
-    """Vérifie que l'utilisateur est un formateur"""
+    """
+    Mixin pour restreindre l'accès aux vues aux utilisateurs qui sont des formateurs.
+    """
+
     def test_func(self):
-        return hasattr(self.request.user, 'formateur')
+        # Vérifie si l'utilisateur est authentifié et a un profil de formateur
+        return self.request.user.is_authenticated and hasattr(self.request.user, 'formateur')
 
     def handle_no_permission(self):
-        messages.error(self.request, _("Accès réservé aux formateurs"))
-        return super().handle_no_permission()
+        # Redirige vers une page d'accès refusé ou affiche un message d'erreur
+        # Assurez-vous que 'accueil' est une URL valide dans votre projet principal urls.py
+        messages.error(self.request, _("Accès réservé aux formateurs."))
+        return redirect('accueil')
 
-# Dashboard
+
+# Vues pour le tableau de bord du formateur (maintenant une Class-Based View)
 class DashboardView(FormateurRequiredMixin, TemplateView):
-    template_name = 'formateurs/dashboard.html'
+    template_name = 'formateurs/dashboard.html'  # Le même template HTML
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
         formateur = self.request.user.formateur
-        
+
         # Cours à venir (7 prochains jours)
         today = timezone.now().date()
         seven_days = today + datetime.timedelta(days=7)
-        context['upcoming_courses'] = Cours.objects.filter(
+        upcoming_courses = Cours.objects.filter(
             formateur=formateur,
             date__range=[today, seven_days]
         ).order_by('date', 'heure_debut')
-        
+
+        # Cours passés non complétés (présences)
+        incomplete_courses = Cours.objects.filter(
+            formateur=formateur,
+            date__lt=today,
+            # Cela suppose qu'un cours est "incomplet" s'il n'a AUCUN enregistrement de présence.
+            # Si la logique est plus complexe (ex: vérifier si tous les élèves n'ont pas été marqués),
+            # elle nécessitera une requête plus sophistiquée.
+            presence__isnull=True
+        ).distinct()
+
         # Statistiques
-        context['total_courses'] = Cours.objects.filter(formateur=formateur).count()
-        context['upcoming_count'] = context['upcoming_courses'].count()
-        
-        # Élèves suivis
-        context['students_count'] = Eleve.objects.filter(
-            inscription__formation__in=formateur.formations.all()
-        ).distinct().count()
-        
+        total_courses = Cours.objects.filter(formateur=formateur).count()
+        upcoming_count = upcoming_courses.count()
+
+        # Élèves suivis - Requête Corrigée
+        # Filtre les élèves qui sont inscrits à des Formations ayant des Cours dispensés par ce Formateur.
+        students = Eleve.objects.filter(
+            inscription__formation__cours__formateur=formateur
+        ).distinct().annotate(
+            # Compte les enregistrements de Présence pour les cours de ce formateur spécifiques à l'élève
+            course_count=Count('presence', filter=Q(
+                presence__cours__formateur=formateur))
+        )
+
+        # Prochain cours (pour la carte en haut)
+        next_course = upcoming_courses.first()
+
         # Taux de présence global
         total_presences = Presence.objects.filter(
             cours__formateur=formateur
@@ -56,247 +89,175 @@ class DashboardView(FormateurRequiredMixin, TemplateView):
             cours__formateur=formateur,
             present=True
         ).count()
-        context['attendance_rate'] = round((present_count / total_presences * 100), 1) if total_presences > 0 else 0
-        
+
+        attendance_rate = (present_count / total_presences *
+                           100) if total_presences > 0 else 0
+
+        context.update({
+            'upcoming_courses': upcoming_courses,
+            'incomplete_courses': incomplete_courses,
+            'next_course': next_course,
+            'total_courses': total_courses,
+            'upcoming_count': upcoming_count,
+            'students': students[:5],  # 5 premiers seulement
+            'attendance_rate': round(attendance_rate, 1),
+            'today': today,
+        })
+
         return context
 
-# Cours
-class CoursListView(FormateurRequiredMixin, ListView):
-    model = Cours
-    template_name = 'formateurs/cours/list.html'
-    context_object_name = 'cours_list'
+# --- Vues pour la Gestion des Élèves (Mes Eleves) ---
+
+
+class MesElevesListView(FormateurRequiredMixin, ListView):
+    model = Eleve
+    template_name = 'formateurs/mes_eleves_list.html'  # Créez ce template
+    context_object_name = 'eleves_list'
     paginate_by = 10
 
     def get_queryset(self):
-        return Cours.objects.filter(
-            formateur=self.request.user.formateur
-        ).order_by('-date', 'heure_debut')
-
-class CoursCreateView(FormateurRequiredMixin, CreateView):
-    model = Cours
-    fields = ['formation', 'titre', 'date', 'heure_debut', 'heure_fin', 'salle', 'objectifs', 'materiel']
-    template_name = 'formateurs/cours/form.html'
-
-    def form_valid(self, form):
-        form.instance.formateur = self.request.user.formateur
-        messages.success(self.request, _("Cours créé avec succès"))
-        return super().form_valid(form)
-
-    def get_success_url(self):
-        return reverse('formateurs:cours_detail', kwargs={'pk': self.object.pk})
-
-class CoursDetailView(FormateurRequiredMixin, DetailView):
-    model = Cours
-    template_name = 'formateurs/cours/detail.html'
-
-    def get_queryset(self):
-        return super().get_queryset().filter(formateur=self.request.user.formateur)
-
-class CoursUpdateView(FormateurRequiredMixin, UpdateView):
-    model = Cours
-    fields = ['formation', 'titre', 'date', 'heure_debut', 'heure_fin', 'salle', 'objectifs', 'materiel']
-    template_name = 'formateurs/cours/form.html'
-
-    def get_queryset(self):
-        return super().get_queryset().filter(formateur=self.request.user.formateur)
-
-    def form_valid(self, form):
-        messages.success(self.request, _("Cours mis à jour avec succès"))
-        return super().form_valid(form)
-
-class CoursDeleteView(FormateurRequiredMixin, DeleteView):
-    model = Cours
-    template_name = 'formateurs/cours/confirm_delete.html'
-    success_url = reverse_lazy('formateurs:cours_list')
-
-    def get_queryset(self):
-        return super().get_queryset().filter(formateur=self.request.user.formateur)
-
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, _("Cours supprimé avec succès"))
-        return super().delete(request, *args, **kwargs)
-
-# Disponibilités
-class DisponibiliteView(FormateurRequiredMixin, ListView):
-    model = Disponibilite
-    template_name = 'formateurs/disponibilites/list.html'
-
-    def get_queryset(self):
-        return Disponibilite.objects.filter(
-            formateur=self.request.user.formateur,
-            date_fin__gte=timezone.now()
-        ).order_by('date_debut')
-
-class DisponibiliteCreateView(FormateurRequiredMixin, CreateView):
-    model = Disponibilite
-    fields = ['date_debut', 'date_fin', 'type', 'notes']
-    template_name = 'formateurs/disponibilites/form.html'
-    success_url = reverse_lazy('formateurs:disponibilites')
-
-    def form_valid(self, form):
-        form.instance.formateur = self.request.user.formateur
-        messages.success(self.request, _("Disponibilité enregistrée avec succès"))
-        return super().form_valid(form)
-
-class DisponibiliteDeleteView(FormateurRequiredMixin, DeleteView):
-    model = Disponibilite
-    template_name = 'formateurs/disponibilites/confirm_delete.html'
-    success_url = reverse_lazy('formateurs:disponibilites')
-
-    def get_queryset(self):
-        return super().get_queryset().filter(formateur=self.request.user.formateur)
-
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, _("Disponibilité supprimée avec succès"))
-        return super().delete(request, *args, **kwargs)
-
-# Élèves
-class MesElevesListView(FormateurRequiredMixin, ListView):
-    template_name = 'formateurs/eleves/list.html'
-    context_object_name = 'eleves'
-
-    def get_queryset(self):
+        """
+        Retourne les élèves qui sont inscrits à des formations où le formateur connecté
+        dispense des cours.
+        """
         formateur = self.request.user.formateur
+        # Cette requête est similaire à celle du tableau de bord
         return Eleve.objects.filter(
-            inscription__formation__in=formateur.formations.all()
-        ).distinct().annotate(
-            course_count=Count('presence', filter=Q(presence__cours__formateur=formateur)))
-        
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['formations'] = self.request.user.formateur.formations.all()
-        return context
+            inscription__formation__cours__formateur=formateur
+        ).distinct().order_by('user__last_name', 'user__first_name')
+
 
 class EleveDetailView(FormateurRequiredMixin, DetailView):
     model = Eleve
-    template_name = 'formateurs/eleves/detail.html'
+    template_name = 'formateurs/eleve_detail.html'  # Créez ce template
+    context_object_name = 'eleve'
+
+    def get_queryset(self):
+        """
+        S'assure que le formateur ne peut voir les détails que de ses propres élèves (ceux de ses formations).
+        """
+        formateur = self.request.user.formateur
+        return Eleve.objects.filter(
+            inscription__formation__cours__formateur=formateur,
+            # Filtre aussi par PK pour s'assurer que c'est le bon élève
+            pk=self.kwargs['pk']
+        ).distinct()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        eleve = self.get_object()
         formateur = self.request.user.formateur
-        eleve = self.object
-        
-        # Formations suivies par l'élève avec ce formateur
-        context['inscriptions'] = Inscription.objects.filter(
+
+        # Récupérer les inscriptions de l'élève pour les formations du formateur
+        context['inscriptions_du_formateur'] = Inscription.objects.filter(
             eleve=eleve,
-            formation__in=formateur.formations.all()
-        ).select_related('formation')
-        
-        # Présences aux cours
-        context['presences'] = Presence.objects.filter(
+            formation__cours__formateur=formateur
+        ).distinct()
+
+        # Récupérer les suivis pédagogiques de cet élève par ce formateur
+        context['suivis_pedagogiques'] = SuiviPedagogique.objects.filter(
             eleve=eleve,
-            cours__formateur=formateur
-        ).select_related('cours', 'cours__formation')
-        
-        # Calcul du taux de présence
-        total = context['presences'].count()
-        present = context['presences'].filter(present=True).count()
-        context['attendance_rate'] = round((present / total * 100), 1) if total > 0 else 0
-        
+            formateur=formateur
+        ).order_by('-date_entretien')
+
+        # Récupérer les documents de cet élève qui sont visibles pour le formateur
+        # Note: DocumentEleve est un modèle de l'app 'eleves', et non 'documents'.
+        context['documents_eleve'] = DocumentEleve.objects.filter(eleve=eleve)
+
         return context
 
-# Documents
+
+# --- Vues pour la Gestion des Documents (spécifiques au formateur) ---
+# Ces vues gèrent le modèle Document de l'application 'documents', mais sont accessibles via 'formateurs'
+# Assurez-vous que vous avez un `documents/forms.py` avec `DocumentForm`
+
+
 class DocumentListView(FormateurRequiredMixin, ListView):
     model = Document
-    template_name = 'formateurs/documents/list.html'
-    
+    template_name = 'formateurs/document_list.html'  # Créez ce template
+    context_object_name = 'documents'
+    paginate_by = 10
+
     def get_queryset(self):
-        return Document.objects.filter(
-            formateur=self.request.user.formateur
-        ).order_by('-date_ajout')
+        """
+        Retourne uniquement les documents associés au formateur connecté.
+        Permet aux super-utilisateurs/staff de voir tous les documents.
+        """
+        if self.request.user.is_superuser or self.request.user.is_staff:
+            return Document.objects.all().order_by('-date_ajout')
+        return Document.objects.filter(formateur=self.request.user.formateur).order_by('-date_ajout')
+
 
 class DocumentCreateView(FormateurRequiredMixin, CreateView):
     model = Document
-    fields = ['titre', 'fichier', 'description', 'formations', 'visible_eleves']
-    template_name = 'formateurs/documents/form.html'
-    
+    form_class = DocumentForm
+    template_name = 'formateurs/document_form.html'  # Créez ce template
+    # Redirige vers la liste des documents du formateur
+    success_url = reverse_lazy('formateurs:documents')
+
     def form_valid(self, form):
+        """
+        Associe automatiquement le document au formateur connecté avant de sauvegarder.
+        """
         form.instance.formateur = self.request.user.formateur
-        messages.success(self.request, _("Document ajouté avec succès"))
+        messages.success(self.request, _(
+            "Le document a été ajouté avec succès !"))
         return super().form_valid(form)
-    
-    def get_success_url(self):
-        return reverse('formateurs:document_detail', kwargs={'pk': self.object.pk})
+
 
 class DocumentDetailView(FormateurRequiredMixin, DetailView):
     model = Document
-    template_name = 'formateurs/documents/detail.html'
-    
+    template_name = 'formateurs/document_detail.html'  # Créez ce template
+    context_object_name = 'document'
+
     def get_queryset(self):
-        return super().get_queryset().filter(formateur=self.request.user.formateur)
+        """
+        S'assure que le formateur ne peut voir que ses propres documents (ou tous s'il est admin/staff).
+        """
+        if self.request.user.is_superuser or self.request.user.is_staff:
+            return Document.objects.all()
+        return Document.objects.filter(formateur=self.request.user.formateur)
+
 
 class DocumentDeleteView(FormateurRequiredMixin, DeleteView):
     model = Document
-    template_name = 'formateurs/documents/confirm_delete.html'
+    template_name = 'formateurs/document_confirm_delete.html'  # Créez ce template
+    # Redirige après suppression
     success_url = reverse_lazy('formateurs:documents')
-    
+
     def get_queryset(self):
-        return super().get_queryset().filter(formateur=self.request.user.formateur)
-    
+        """
+        S'assure que le formateur ne peut supprimer que ses propres documents (ou tous s'il est admin/staff).
+        """
+        if self.request.user.is_superuser or self.request.user.is_staff:
+            return Document.objects.all()
+        return Document.objects.filter(formateur=self.request.user.formateur)
+
     def delete(self, request, *args, **kwargs):
-        messages.success(request, _("Document supprimé avec succès"))
+        messages.success(self.request, _(
+            "Le document a été supprimé avec succès !"))
         return super().delete(request, *args, **kwargs)
 
-# Statistiques
+
+# --- Vue pour les Statistiques (Ébauche) ---
 class StatistiquesView(FormateurRequiredMixin, TemplateView):
-    template_name = 'formateurs/statistiques.html'
-    
+    template_name = 'formateurs/statistiques.html'  # Créez ce template
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         formateur = self.request.user.formateur
-        
-        # Statistiques générales
-        context['total_formations'] = formateur.formations.count()
-        context['total_cours'] = Cours.objects.filter(formateur=formateur).count()
-        context['total_eleves'] = Eleve.objects.filter(
-            inscription__formation__in=formateur.formations.all()
-        ).distinct().count()
-        
-        # Taux de présence par formation
-        formations_data = []
-        for formation in formateur.formations.all():
-            presences = Presence.objects.filter(
-                cours__formation=formation,
-                cours__formateur=formateur
-            )
-            total = presences.count()
-            present = presences.filter(present=True).count()
-            rate = round((present / total * 100), 1) if total > 0 else 0
-            
-            formations_data.append({
-                'formation': formation,
-                'total': total,
-                'present': present,
-                'rate': rate
-            })
-        
-        context['formations_data'] = sorted(
-            formations_data, 
-            key=lambda x: x['rate'], 
-            reverse=True
-        )
-        
-        # Évolution mensuelle
-        current_year = timezone.now().year
-        monthly_data = []
-        for month in range(1, 13):
-            month_start = timezone.datetime(current_year, month, 1)
-            month_end = timezone.datetime(
-                current_year, 
-                month+1 if month < 12 else 12, 
-                1 if month < 12 else 31
-            )
-            
-            cours_count = Cours.objects.filter(
-                formateur=formateur,
-                date__range=[month_start, month_end]
-            ).count()
-            
-            monthly_data.append({
-                'month': month_start.strftime('%B'),
-                'count': cours_count
-            })
-        
-        context['monthly_data'] = monthly_data
-        
+
+        # Exemple: Récupération de données pour les statistiques
+        # Vous devrez ajouter ici la logique de calcul de vos statistiques
+        # Exemples:
+        # total_cours_termines = Cours.objects.filter(formateur=formateur, date__lt=timezone.now().date()).count()
+        # total_eleves = Eleve.objects.filter(
+        #     inscription__formation__cours__formateur=formateur
+        # ).distinct().count()
+        # presence_moyenne_par_cours = ...
+
+        context['formateur'] = formateur
+        context['message_statistiques'] = _(
+            "Cette page affichera des statistiques détaillées pour vos cours et élèves. Veuillez implémenter la logique ici.")
+
         return context

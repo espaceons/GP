@@ -5,9 +5,9 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
 from django.db.models import Count, Q
 
-from .models import Eleve, DocumentEleve
+from .models import Eleve, DocumentEleve, Inscription
 from .forms import EleveUpdateForm, DocumentEleveForm
-from formations.models import Formation, Inscription
+from formations.models import Formation
 from presence.models import Presence
 
 class EleveRequiredMixin(LoginRequiredMixin):

@@ -3,9 +3,16 @@ from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMix
 from django.urls import reverse, reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
+from django.views.generic import TemplateView
+
+
+from accounts import models
+from documents.models import Document
+from eleves.models import Eleve
 
 from .models import Formation, Domaine, Module
 from .forms import FormationForm, ModuleForm
+
 
 class FormationListView(ListView):
     model = Formation
@@ -15,23 +22,24 @@ class FormationListView(ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        
+
         # Filtre par domaine
         domaine_id = self.request.GET.get('domaine')
         if domaine_id:
             queryset = queryset.filter(domaine_id=domaine_id)
-        
+
         # Filtre actif/inactif
         actif = self.request.GET.get('actif')
         if actif in ['true', 'false']:
             queryset = queryset.filter(actif=actif == 'true')
-        
+
         return queryset.select_related('domaine').prefetch_related('modules')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['domaines'] = Domaine.objects.all()
         return context
+
 
 class FormationDetailView(DetailView):
     model = Formation
@@ -42,6 +50,7 @@ class FormationDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         context['module_form'] = ModuleForm(initial={'formation': self.object})
         return context
+
 
 class FormationCreateView(PermissionRequiredMixin, CreateView):
     model = Formation
@@ -54,6 +63,7 @@ class FormationCreateView(PermissionRequiredMixin, CreateView):
         messages.success(self.request, _("Formation créée avec succès"))
         return super().form_valid(form)
 
+
 class FormationUpdateView(PermissionRequiredMixin, UpdateView):
     model = Formation
     form_class = FormationForm
@@ -64,6 +74,7 @@ class FormationUpdateView(PermissionRequiredMixin, UpdateView):
         messages.success(self.request, _("Formation mise à jour avec succès"))
         return super().form_valid(form)
 
+
 class FormationDeleteView(PermissionRequiredMixin, DeleteView):
     model = Formation
     template_name = 'formations/formation_confirm_delete.html'
@@ -73,6 +84,7 @@ class FormationDeleteView(PermissionRequiredMixin, DeleteView):
     def delete(self, request, *args, **kwargs):
         messages.success(request, _("Formation supprimée avec succès"))
         return super().delete(request, *args, **kwargs)
+
 
 class ModuleCreateView(PermissionRequiredMixin, CreateView):
     model = Module
@@ -87,6 +99,7 @@ class ModuleCreateView(PermissionRequiredMixin, CreateView):
         messages.success(self.request, _("Module ajouté avec succès"))
         return super().form_valid(form)
 
+
 class ModuleUpdateView(PermissionRequiredMixin, UpdateView):
     model = Module
     form_class = ModuleForm
@@ -100,6 +113,7 @@ class ModuleUpdateView(PermissionRequiredMixin, UpdateView):
         messages.success(self.request, _("Module modifié avec succès"))
         return super().form_valid(form)
 
+
 class ModuleDeleteView(PermissionRequiredMixin, DeleteView):
     model = Module
     template_name = 'formations/module_confirm_delete.html'
@@ -111,3 +125,25 @@ class ModuleDeleteView(PermissionRequiredMixin, DeleteView):
     def delete(self, request, *args, **kwargs):
         messages.success(request, _("Module supprimé avec succès"))
         return super().delete(request, *args, **kwargs)
+
+    # statistique :
+
+
+class StatistiquesView(LoginRequiredMixin, TemplateView):
+    template_name = 'formations/statistiques.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+
+        # Statistiques simples
+        context['nb_eleves'] = Eleve.objects.filter(formateur=user).count()
+        context['nb_documents'] = Document.objects.filter(
+            formateur=user).count()
+
+        # Statistique avancée (exemple : nombre de documents par élève)
+        context['documents_par_eleve'] = Eleve.objects.filter(formateur=user).annotate(
+            doc_count=models.Count('document')
+        )
+
+        return context

@@ -1,0 +1,13 @@
+{% extends 'formateurs/base.html' %} {% block title %}Mes Élèves{% endblock %}
+{% block content %}
+<h2>Liste de mes élèves</h2>
+<ul>
+  {% for eleve in eleves %}
+  <li>
+    <a href="{% url 'eleve_detail' eleve.pk %}">{{ eleve.nom }}</a>
+  </li>
+  {% empty %}
+  <li>Aucun élève trouvé.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

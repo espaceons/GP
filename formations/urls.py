@@ -11,12 +11,15 @@ urlpatterns = [
     path('<int:pk>/', views.FormationDetailView.as_view(), name='detail'),
     path('<int:pk>/modifier/', views.FormationUpdateView.as_view(), name='update'),
     path('<int:pk>/supprimer/', views.FormationDeleteView.as_view(), name='delete'),
-    
+
     # Modules
-    path('<int:formation_pk>/modules/ajouter/', views.ModuleCreateView.as_view(), name='module_create'),
-    path('modules/<int:pk>/modifier/', views.ModuleUpdateView.as_view(), name='module_update'),
-    path('modules/<int:pk>/supprimer/', views.ModuleDeleteView.as_view(), name='module_delete'),
-    
+    path('<int:formation_pk>/modules/ajouter/',
+         views.ModuleCreateView.as_view(), name='module_create'),
+    path('modules/<int:pk>/modifier/',
+         views.ModuleUpdateView.as_view(), name='module_update'),
+    path('modules/<int:pk>/supprimer/',
+         views.ModuleDeleteView.as_view(), name='module_delete'),
+    path('statistiques/', views.StatistiquesView.as_view(), name='statistiques'),
     # Domaines (API/JSON)
-#    path('domaines/', views.DomaineListView.as_view(), name='domaine_list'),
+    #    path('domaines/', views.DomaineListView.as_view(), name='domaine_list'),
 ]

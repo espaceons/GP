@@ -9,6 +9,12 @@ from datetime import date
 from .models import Cours, Salle, Disponibilite
 from .forms import CoursForm, DisponibiliteForm
 
+
+from django.views.generic import TemplateView
+from .models import Cours
+from datetime import date, timedelta
+
+
 class PlanningMixin(LoginRequiredMixin):
     """Mixin de base pour les vues du planning"""
     
@@ -105,8 +111,34 @@ class DisponibiliteCreateView(PlanningMixin, CreateView):
         form.instance.formateur = self.request.user.formateur
         messages.success(self.request, _("Disponibilité enregistrée avec succès."))
         return super().form_valid(form)
+    
+class DisponibiliteDeleteView(PlanningMixin, DeleteView):
+    model = Disponibilite
+    template_name = 'planning/disponibilite_confirm_delete.html'
+    success_url = reverse_lazy('planning:disponibilite_list')
 
 class SalleListView(ListView):
     model = Salle
     template_name = 'planning/salle_list.html'
     context_object_name = 'salles'
+    
+    
+
+
+class CalendrierView(PlanningMixin, TemplateView):
+    template_name = 'planning/calendrier.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        today = date.today()
+        end_date = today + timedelta(days=30)  # Affiche les cours des 30 prochains jours
+
+        cours = Cours.objects.filter(
+            date__range=(today, end_date)
+        ).order_by('date', 'heure_debut')
+
+        context['cours'] = cours
+        context['start_date'] = today
+        context['end_date'] = end_date
+        return context
+
