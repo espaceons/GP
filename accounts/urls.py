@@ -3,7 +3,7 @@ from django.contrib.auth import views as auth_views
 from django.utils.translation import gettext_lazy as _
 from accounts import views
 
-app_name = 'accounts'
+app_name = 'comptes'
 
 urlpatterns = [
     path('inscription/', views.register, name='register'),
